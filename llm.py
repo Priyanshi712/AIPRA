@@ -1,147 +1,121 @@
 import os
 import json
-from openai import OpenAI
+import re
+from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-MODEL = os.getenv("OPENAI_MODEL", "gpt-5")
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 
 
-def create_research_plan(question: str, num_queries: int = 4) -> dict:
-    prompt = f"""You are an expert research planner. The user wants to research:
+def create_research_plan(question: str, num_queries: int = 3) -> dict:
+    prompt = f"""You are an AI research planner.
+Generate {num_queries} distinct web search queries to thoroughly research: "{question}"
 
-"{question}"
+Rules:
+- Write ONLY a valid JSON array of search strings.
+- Do NOT add thoughts, markdown commentary, or explanations.
 
-Generate exactly {num_queries} diverse web search queries that explore different aspects of this question.
-Each query should be:
-- Specific and focused
-- Different from the others
-- Likely to return relevant results
+Example response:
+["what is retrieval augmented generation", "how does RAG work architecture", "RAG use cases and benefits"]"""
 
-Return ONLY valid JSON with no additional text:
-{{
-    "queries": [
-        "query 1",
-        "query 2",
-        "query 3",
-        "query 4"
-    ]
-}}
-"""
-    
     try:
         response = client.chat.completions.create(
             model=MODEL,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-            max_tokens=500
+            temperature=0.2,
+            max_tokens=250
         )
+
+        raw_text = response.choices[0].message.content or ""
         
-        response_text = response.choices[0].message.content.strip()
-        plan = json.loads(response_text)
-        return plan
-    
-    except json.JSONDecodeError as e:
-        print(f"Error parsing LLM response: {e}")
-        return {"queries": [question]}
+        # Remove any internal reasoning tokens
+        cleaned_text = re.sub(r"<think>.*?</think>", "", raw_text, flags=re.DOTALL).strip()
+        
+        # Extract JSON list if present
+        match = re.search(r"\[.*?\]", cleaned_text, re.DOTALL)
+        if match:
+            queries = json.loads(match.group(0))
+            valid_queries = [q for q in queries if isinstance(q, str) and len(q) > 3 and not q.startswith("<think")]
+            if valid_queries:
+                return {"queries": valid_queries[:num_queries]}
+
+        # Fallback line-by-line parsing
+        lines = [line.strip().lstrip("0123456789.-*•\"'[] ") for line in cleaned_text.splitlines() if line.strip()]
+        queries = [
+            q for q in lines 
+            if len(q) > 4 and not any(tag in q.lower() for tag in ["think", "role:", "topic:", "analyze"])
+        ]
+
+        return {"queries": queries[:num_queries] if queries else [question]}
+
     except Exception as e:
         print(f"Error creating research plan: {e}")
         return {"queries": [question]}
 
 
 def analyze_sources(question: str, sources: list) -> str:
+    # 1. Deduplicate sources by URL
+    seen_urls = set()
+    unique_sources = []
+    for s in sources:
+        url = s.get("url", "")
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            unique_sources.append(s)
+
+    # 2. Limit to top 6 sources and cap content to 600 chars each to stay well under TPM limits
+    top_sources = unique_sources[:6]
     formatted_sources = ""
-    for i, source in enumerate(sources, 1):
-        formatted_sources += f"\n[{i}] **{source.get('title', 'Untitled')}**\n"
+    for i, source in enumerate(top_sources, 1):
+        content_snippet = source.get("content", "No content available")[:600]
+        formatted_sources += f"\n[{i}] {source.get('title', 'Untitled')}\n"
         formatted_sources += f"URL: {source.get('url', 'N/A')}\n"
-        formatted_sources += f"Content: {source.get('content', 'No content available')}\n"
-        formatted_sources += "-" * 50 + "\n"
-    
-    prompt = f"""You are an expert research analyst. Your task is to create a comprehensive research report.
+        formatted_sources += f"Snippet: {content_snippet}...\n"
+        formatted_sources += "-" * 30 + "\n"
 
-Research Question:
-{question}
+    prompt = f"""You are a research analyst. Write a clear markdown report for: "{question}"
 
-Below are web sources collected by the research agent:
-
+Sources:
 {formatted_sources}
 
-Create a well-structured research report following these requirements:
-
-1. **Executive Summary** - Brief overview of key findings (2-3 sentences)
-2. **Key Findings** - Main discoveries organized by theme (use numbered citations)
-3. **Important Details** - Supporting details and context
-4. **Limitations & Contradictions** - Areas of disagreement or insufficient data
-5. **Conclusion** - Summary and implications
-
-Guidelines:
-- ONLY cite facts that are clearly in the sources
-- Use [1], [2], [3] etc. to reference sources
-- Do NOT invent information
-- Be objective and balanced
-- Use markdown formatting
-- Include a **Sources** section at the end listing [1] through [n]
-
-Format your response as clean markdown:
-
+Report Structure:
 # Research Report
-
 ## Executive Summary
-...
-
+(2-3 sentences overview)
 ## Key Findings
-...
-
-## Important Details
-...
-
-## Limitations & Contradictions
-...
-
-## Conclusion
-...
-
+(Detailed points citing sources using [1], [2], etc.)
+## Limitations & Key Takeaways
 ## Sources
-[1] [Source Title](URL)
-[2] [Source Title](URL)
-...
-"""
-    
+(List format: [1] [Title](URL))"""
+
     try:
         response = client.chat.completions.create(
             model=MODEL,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-            max_tokens=2000
+            temperature=0.2,
+            max_tokens=1500
         )
-        
-        report = response.choices[0].message.content.strip()
-        return report
-    
+        report = response.choices[0].message.content or ""
+        return re.sub(r"<think>.*?</think>", "", report, flags=re.DOTALL).strip()
     except Exception as e:
         print(f"Error analyzing sources: {e}")
         return f"Error generating report: {e}"
 
 
 def generate_summary(text: str, max_length: int = 200) -> str:
-    prompt = f"""Summarize the following text in {max_length} characters or less:
-
-{text}
-
-Return ONLY the summary, no additional text."""
-    
+    prompt = f"Summarize this text in under {max_length} characters. Return ONLY the summary:\n\n{text}"
     try:
         response = client.chat.completions.create(
             model=MODEL,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.5,
+            temperature=0.2,
             max_tokens=100
         )
-        
-        return response.choices[0].message.content.strip()
-    
+        summary = response.choices[0].message.content or ""
+        return re.sub(r"<think>.*?</think>", "", summary, flags=re.DOTALL).strip()[:max_length]
     except Exception as e:
         print(f"Error generating summary: {e}")
         return text[:max_length]
