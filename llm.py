@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-MODEL = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
+MODEL = os.getenv("OPENAI_MODEL", "gpt-5")
 
 
 def create_research_plan(question: str, num_queries: int = 4) -> dict:
