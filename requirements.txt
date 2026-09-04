@@ -1,5 +1,0 @@
-﻿streamlit
-openai
-tavily-python
-python-dotenv
-requests
