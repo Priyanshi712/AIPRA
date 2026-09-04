@@ -14,6 +14,10 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+SUMMARY_MAX_LENGTH = int(os.getenv("SUMMARY_MAX_LENGTH", 1500))
+SUMMARY_MAX_TOKENS = int(os.getenv("SUMMARY_MAX_TOKENS", 800))
+PLAN_MAX_TOKENS = int(os.getenv("PLAN_MAX_TOKENS", 600))
+REPORT_MAX_TOKENS = int(os.getenv("REPORT_MAX_TOKENS", 6000))
 
 model = genai.GenerativeModel(MODEL)
 
@@ -52,7 +56,7 @@ Rules:
 - Do not include numbering, bullets, quotes, or conversational preamble."""
 
     try:
-        raw_text = clean_llm_output(_generate(prompt, temperature=0.2, max_tokens=800))
+        raw_text = clean_llm_output(_generate(prompt, temperature=0.2, max_tokens=PLAN_MAX_TOKENS))
         lines = [line.strip().lstrip("0123456789.-*•\"'[] ") for line in raw_text.splitlines() if line.strip()]
         queries = [
             q for q in lines
@@ -110,7 +114,7 @@ Respond strictly in markdown matching this structure:
 (List format: [1] [Title](URL))"""
 
     try:
-        raw_report = _generate(prompt, temperature=0.2, max_tokens=3000)
+        raw_report = _generate(prompt, temperature=0.2, max_tokens=REPORT_MAX_TOKENS)
         return clean_llm_output(raw_report)
 
     except Exception as e:
@@ -118,11 +122,12 @@ Respond strictly in markdown matching this structure:
         return f"Error generating report: {e}"
 
 
-def generate_summary(text: str, max_length: int = 200) -> str:
+def generate_summary(text: str, max_length: int = None) -> str:
+    max_length = max_length or SUMMARY_MAX_LENGTH
     prompt = f"Summarize this text in under {max_length} characters. Return ONLY the summary:\n\n{text}"
     try:
-        raw_summary = _generate(prompt, temperature=0.2, max_tokens=1000)
-        return clean_llm_output(raw_summary)[:max_length]
+        raw_summary = _generate(prompt, temperature=0.2, max_tokens=SUMMARY_MAX_TOKENS)
+        return clean_llm_output(raw_summary)
     except Exception as e:
         print(f"Error generating summary: {e}")
         return text[:max_length]
