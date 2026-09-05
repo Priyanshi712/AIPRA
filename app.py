@@ -196,7 +196,7 @@ render_html(
         letter-spacing: 2px;
         text-transform: uppercase;
 
-        color: #596271;
+        color: #929daf;
     }
 
     .sidebar-item {
@@ -268,13 +268,13 @@ render_html(
        ======================================================== */
 
     .topbar {
-        height: 58px;
+        height: 82px;
 
         display: flex;
         align-items: center;
         justify-content: space-between;
 
-        margin-bottom: 45px;
+        margin-bottom: 28px;
 
         border-bottom: 1px solid rgba(255,255,255,0.05);
     }
@@ -282,12 +282,12 @@ render_html(
     .brand {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 14px;
     }
 
     .brand-symbol {
-        width: 28px;
-        height: 28px;
+        width: 40px;
+        height: 40px;
 
         border-radius: 9px;
 
@@ -308,15 +308,22 @@ render_html(
     }
 
     .brand-name {
-        font-size: 15px;
-        font-weight: 600;
-        letter-spacing: -0.3px;
+        font-size: 35px;
+        font-weight: 750;
+        letter-spacing: 1.6px;
+        line-height: 1;
+        display: inline-block;
+        transform: scaleX(1.08);
+        transform-origin: left center;
+        min-width: 118px;
+        color: #f2f5fb;
+        text-shadow: 0 0 24px rgba(91,141,255,0.12);
     }
 
     .brand-status {
-        margin-left: 8px;
+        margin-left: 10px;
 
-        padding: 5px 9px;
+        padding: 7px 12px;
 
         border-radius: 20px;
 
@@ -325,7 +332,8 @@ render_html(
 
         color: #54dca7;
 
-        font-size: 9px;
+        font-size: 10px;
+        letter-spacing: 0.6px;
     }
 
     .top-actions {
@@ -349,12 +357,40 @@ render_html(
     }
 
 
+    @media (max-width: 700px) {
+        .topbar {
+            height: 70px;
+        }
+
+        .brand {
+            gap: 10px;
+        }
+
+        .brand-symbol {
+            width: 34px;
+            height: 34px;
+        }
+
+        .brand-name {
+            font-size: 35px;
+            min-width: auto;
+            letter-spacing: 1.6px;
+            transform: scaleX(1.08);
+        }
+
+        .brand-status {
+            padding: 6px 9px;
+            font-size: 9px;
+        }
+    }
+
+
     /* ========================================================
        HERO
        ======================================================== */
 
     .hero {
-        margin-bottom: 38px;
+        margin-bottom: 24px;
     }
 
     .hero-eyebrow {
@@ -370,7 +406,7 @@ render_html(
     }
 
     .hero-title {
-        font-size: 43px;
+        font-size: 38px;
         line-height: 1.1;
 
         font-weight: 500;
@@ -395,7 +431,7 @@ render_html(
     }
 
     .hero-subtitle {
-        color: #707987;
+        color: #aeb9c8;
 
         font-size: 13px;
 
@@ -550,7 +586,7 @@ render_html(
     }
 
     .agent-subtitle {
-        color: #8192b0;
+        color: #a2b1c8;
 
         font-size: 12px;
 
@@ -602,7 +638,7 @@ render_html(
     }
 
     .metric-label {
-        color: #71809b;
+        color: #95a2b5;
 
         font-size: 9px;
 
@@ -650,7 +686,7 @@ render_html(
     .card-label {
         font-size: 9px;
 
-        color: #647082;
+        color: #a2adbd;
 
         text-transform: uppercase;
 
@@ -672,7 +708,7 @@ render_html(
     }
 
     .query-hint {
-        color: #596473;
+        color: #9aa6b7;
 
         font-size: 11px;
 
@@ -719,7 +755,7 @@ render_html(
     }
 
     .stTextInput > div > div > input::placeholder {
-        color: #4f5866 !important;
+        color: #8e9bad !important;
     }
 
 
@@ -814,7 +850,7 @@ render_html(
     .control-label {
         font-size: 9px;
 
-        color: #657080;
+        color: #a2adbd;
 
         letter-spacing: 1.5px;
 
@@ -861,7 +897,7 @@ render_html(
     }
 
     .thinking-text {
-        color: #697586;
+        color: #a0adbd;
 
         font-size: 11px;
     }
@@ -924,7 +960,7 @@ render_html(
     }
 
     .results-count {
-        color: #596575;
+        color: #9aa6b7;
 
         font-size: 10px;
 
@@ -1130,7 +1166,7 @@ render_html(
     }
 
     .source-url {
-        color: #566170;
+        color: #8b97a8;
 
         font-size: 10px;
 
@@ -1245,7 +1281,7 @@ render_html(
     }
 
     .stat-label {
-        color: #596473;
+        color: #9aa6b7;
 
         font-size: 8px;
 
@@ -1296,6 +1332,196 @@ render_html(
 
         .stats-row {
             grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+
+    /* ========================================================
+       AIPRA UX POLISH
+       ======================================================== */
+
+    .query-card-open {
+        padding-bottom: 16px;
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
+        border-bottom-color: rgba(91,141,255,0.16);
+    }
+
+    .query-topline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .query-badge {
+        color: #b5caff;
+        background: rgba(79,140,255,0.10);
+        border: 1px solid rgba(79,140,255,0.20);
+        border-radius: 999px;
+        padding: 5px 9px;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        white-space: nowrap;
+    }
+
+    .controls-attached {
+        margin-top: -1px;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        border-bottom: 0;
+        background: rgba(17,23,33,0.92);
+        padding: 17px 20px 7px;
+    }
+
+    .query-footer-note {
+        margin-top: 12px;
+        color: #8794a6;
+        font-size: 10px;
+        line-height: 1.55;
+        text-align: right;
+    }
+
+    .stSelectbox label,
+    .stSlider label {
+        color: #aeb9c8 !important;
+        font-size: 10px !important;
+        font-weight: 600 !important;
+        letter-spacing: .7px !important;
+        text-transform: uppercase !important;
+        margin-bottom: 6px !important;
+    }
+
+    .stTextInput {
+        margin-top: -8px;
+        margin-bottom: 0;
+    }
+
+    .stTextInput > div > div > input {
+        min-height: 62px !important;
+        border-radius: 14px !important;
+        border-color: rgba(121,151,201,0.22) !important;
+        background: rgba(5,9,15,0.96) !important;
+    }
+
+    .stTextInput > div > div > input:hover {
+        border-color: rgba(121,151,201,0.38) !important;
+    }
+
+    .stTextInput > div > div > input::placeholder {
+        color: #8e9bad !important;
+        opacity: 1 !important;
+    }
+
+    /* Brand-aligned neutral blue slider instead of red/coral. */
+    .stSlider [data-baseweb="slider"] [role="slider"] {
+        background: #79a2ff !important;
+        border-color: #79a2ff !important;
+        box-shadow: 0 0 0 3px rgba(121,162,255,0.12) !important;
+    }
+
+    .stSlider [data-baseweb="slider"] > div > div {
+        background: linear-gradient(90deg, #477dff, #82aaff) !important;
+    }
+
+    .stSlider [data-baseweb="slider"] > div > div > div {
+        background: #27354f !important;
+    }
+
+    .stSelectbox [data-baseweb="select"] > div {
+        min-height: 44px !important;
+    }
+
+    .stButton > button {
+        min-height: 48px !important;
+        border-radius: 13px !important;
+    }
+
+    .stButton > button:focus-visible,
+    .stSelectbox [data-baseweb="select"]:focus-within,
+    .stTextInput input:focus-visible {
+        outline: 2px solid rgba(121,162,255,0.7) !important;
+        outline-offset: 2px;
+    }
+
+    .agent-card {
+        min-height: 370px;
+    }
+
+    .agent-subtitle {
+        max-width: 290px;
+    }
+
+    .agent-tasks {
+        max-width: 330px;
+    }
+
+    .workspace {
+        box-shadow:
+            0 35px 110px rgba(0,0,0,0.42),
+            inset 0 1px 0 rgba(255,255,255,0.045);
+    }
+
+    .hero-subtitle {
+        max-width: 690px;
+    }
+
+    @media (max-width: 900px) {
+        .agent-card {
+            min-height: 310px;
+        }
+
+        .query-footer-note {
+            text-align: left;
+        }
+
+        .query-topline {
+            align-items: flex-start;
+        }
+    }
+
+
+
+    /* ========================================================
+       OVERSIZED AIPRA WORDMARK — requested brand emphasis
+       ======================================================== */
+
+    .sidebar-logo-text,
+    .logo-text,
+    .brand-name,
+    .brand-text,
+    .app-name,
+    .brand-wordmark {
+        font-size: 34px !important;
+        font-weight: 800 !important;
+        letter-spacing: 2.2px !important;
+        line-height: 1 !important;
+        transform: scaleX(1.12);
+        transform-origin: left center;
+        display: inline-block !important;
+        white-space: nowrap !important;
+    }
+
+    /* Preserve a clean gap between the enlarged wordmark and status. */
+    .sidebar-logo,
+    .brand,
+    .top-brand,
+    .brand-logo,
+    .header-brand {
+        gap: 18px !important;
+    }
+
+    @media (max-width: 900px) {
+        .sidebar-logo-text,
+        .logo-text,
+        .brand-name,
+        .brand-text,
+        .app-name,
+        .brand-wordmark {
+            font-size: 28px !important;
+            letter-spacing: 1.5px !important;
+            transform: scaleX(1.06);
         }
     }
 
@@ -1377,7 +1603,7 @@ with st.sidebar:
         render_html(
             """
             <div style="
-                color:#505a68;
+                color:#8995a6;
                 font-size:11px;
                 padding:10px 5px;
             ">
@@ -1442,11 +1668,7 @@ render_html(
         <div class="top-actions">
 
             <div class="top-pill">
-                Research Agent
-            </div>
-
-            <div class="top-pill">
-                v2.0
+                v2.0 · Research workspace
             </div>
 
         </div>
@@ -1474,8 +1696,7 @@ render_html(
         </div>
 
         <div class="hero-subtitle">
-            Ask a question. AIPRA plans the research, gathers evidence,
-            analyzes sources and synthesizes the answer.
+            Turn complex questions into a focused evidence trail—planned, sourced, and synthesized by AIPRA.
         </div>
 
     </div>
@@ -1522,7 +1743,7 @@ with left:
             </div>
 
             <div class="agent-title">
-                Research Agent
+                AIPRA Engine
             </div>
 
             <div class="agent-subtitle">
@@ -1566,22 +1787,20 @@ with left:
 # ============================================================
 
 with right:
-    # Self-contained HTML block — no Streamlit widget is placed inside it.
     render_html(
         """
-        <div class="query-card">
-            <div class="card-label">
-                New Research
+        <div class="query-card query-card-open">
+            <div class="query-topline">
+                <div class="card-label">NEW RESEARCH</div>
+                <div class="query-badge">READY TO ANALYZE</div>
             </div>
 
             <div class="query-title">
-                What would you like<br>
-                to understand?
+                What would you like to understand?
             </div>
 
             <div class="query-hint">
-                Ask a question below. AIPRA will break it into research steps,
-                search relevant sources and synthesize the strongest findings.
+                Define the question, choose the research depth, and set the evidence target.
             </div>
         </div>
         """,
@@ -1590,51 +1809,54 @@ with right:
 
     query = st.text_input(
         "Research question",
-        placeholder="Ask anything you want to research...",
+        placeholder="e.g. What are the most promising approaches to…",
         label_visibility="collapsed",
         key="research_question"
     )
 
-
-# ============================================================
-# CONTROLS
-# ============================================================
-
-render_html(
-    """
-    <div class="controls">
-        <div class="control-label">
-            Research Configuration
+    render_html(
+        """
+        <div class="controls controls-attached">
+            <div class="control-label">RESEARCH CONFIGURATION</div>
         </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-c1, c2, c3 = st.columns([1.3, 1, 0.7], gap="medium")
-
-with c1:
-    depth = st.selectbox(
-        "Depth",
-        ["Quick", "Standard", "Deep"],
-        index=1,
-        label_visibility="collapsed"
+        """,
+        unsafe_allow_html=True
     )
 
-with c2:
-    num_sources = st.slider(
-        "Sources",
-        min_value=3,
-        max_value=10,
-        value=6,
-        label_visibility="collapsed"
+    c1, c2, c3 = st.columns([1.15, 1.15, 0.8], gap="medium")
+
+    with c1:
+        depth = st.selectbox(
+            "Depth",
+            ["Quick", "Standard", "Deep"],
+            index=1,
+            label_visibility="visible"
+        )
+
+    with c2:
+        num_sources = st.slider(
+            "Evidence sources",
+            min_value=3,
+            max_value=10,
+            value=6,
+            label_visibility="visible"
+        )
+
+    with c3:
+        search_button = st.button(
+            "ANALYZE  →",
+            use_container_width=True
+        )
+
+    render_html(
+        """
+        <div class="query-footer-note">
+            AIPRA will plan the research, gather evidence, and synthesize the strongest findings.
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-with c3:
-    search_button = st.button(
-        "Analyze →",
-        use_container_width=True
-    )
 
 # ============================================================
 # EMPTY STATE
@@ -1712,10 +1934,10 @@ if search_button:
                         <span class="green-dot"></span>
 
                         <strong>
-                            Research Agent
+                            AIPRA Engine
                         </strong>
 
-                        <span style="color:#596575;">
+                        <span style="color:#9aa6b7;">
                             {stage}
                         </span>
 
@@ -1771,7 +1993,7 @@ if search_button:
                         Research complete
                     </strong>
 
-                    <span style="color:#596575;">
+                    <span style="color:#9aa6b7;">
                         {format_time(elapsed)}
                     </span>
 
@@ -2087,7 +2309,7 @@ if st.session_state.last_result is not None:
                         </div>
 
                         <div style="
-                            color:#526070;
+                            color:#8c99aa;
                             font-size:16px;
                         ">
                             ↗
@@ -2113,10 +2335,10 @@ render_html(
     """
     <div style="
         text-align:center;
-        margin-top:70px;
-        padding-top:25px;
+        margin-top:48px;
+        padding-top:20px;
         border-top:1px solid rgba(255,255,255,0.045);
-        color:#3f4855;
+        color:#778396;
         font-size:9px;
         letter-spacing:1.5px;
         text-transform:uppercase;
