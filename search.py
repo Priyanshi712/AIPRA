@@ -1,249 +1,225 @@
+"""
+Web Search Module - Enhanced Version
+Handles searching with fallback strategies and result processing
+"""
+
+
 import os
-from urllib.parse import urlparse, urlunparse
-
-from tavily import TavilyClient
+import json
+from typing import List, Dict, Any
+import requests
 from dotenv import load_dotenv
-
-
-# ============================================================
-# ENVIRONMENT CONFIGURATION
-# ============================================================
-
 load_dotenv()
 
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
-if not TAVILY_API_KEY:
-    raise ValueError(
-        "TAVILY_API_KEY is missing. "
-        "Please add it to your .env file."
-    )
-
-tavily = TavilyClient(api_key=TAVILY_API_KEY)
-
-
-# ============================================================
-# URL NORMALIZATION
-# ============================================================
-
-def normalize_url(url: str) -> str:
+class SearchEngine:
     """
-    Normalize a URL so that minor URL differences
-    don't cause duplicate sources.
-
-    Example:
-        https://example.com/article/
-        https://example.com/article
-        https://example.com/article?utm_source=test
-
-    are treated as the same source.
+    Multi-strategy search engine with fallbacks
     """
-
-    if not url:
-        return ""
-
-    try:
-        parsed = urlparse(url)
-
-        # Remove query parameters and fragments.
-        normalized = parsed._replace(
-            query="",
-            fragment=""
-        )
-
-        # Remove trailing slash from path.
-        path = normalized.path.rstrip("/")
-
-        normalized = normalized._replace(
-            path=path
-        )
-
-        return urlunparse(normalized)
-
-    except Exception:
-        return url.strip()
-
-
-# ============================================================
-# SINGLE WEB SEARCH
-# ============================================================
-
-def search_web(
-    query: str,
-    max_results: int = 5
-) -> list:
-    """
-    Search the web using Tavily.
-
-    Args:
-        query: Search query.
-        max_results: Maximum number of results.
-
-    Returns:
-        Cleaned list of source dictionaries.
-    """
-
-    try:
-
-        response = tavily.search(
-            query=query,
-            search_depth="advanced",
-            max_results=max_results,
-            include_answer=True
-        )
-
-        results = []
-
-        for result in response.get("results", []):
-
-            title = result.get(
-                "title",
-                ""
-            ).strip()
-
-            url = result.get(
-                "url",
-                ""
-            ).strip()
-
-            content = result.get(
-                "content",
-                ""
-            ).strip()
-
-            score = result.get(
-                "score",
-                0
-            )
-
-            # -----------------------------------------------
-            # Ignore incomplete results
-            # -----------------------------------------------
-
-            if not url or not content:
-                continue
-
-            # -----------------------------------------------
-            # Normalize score
-            # -----------------------------------------------
-
-            try:
-                score = float(score)
-            except (TypeError, ValueError):
-                score = 0.0
-
-            results.append(
-                {
-                    "title": title or "Untitled",
-                    "url": normalize_url(url),
-                    "content": content,
-                    "score": score
-                }
-            )
-
-        # -----------------------------------------------
-        # Highest relevance first
-        # -----------------------------------------------
-
-        results.sort(
-            key=lambda source: source["score"],
-            reverse=True
-        )
-
-        return results
-
-    except Exception as e:
-
-        print(
-            f"❌ Search error for query "
-            f"'{query}': {e}"
-        )
-
+    
+    def __init__(self):
+        """Initialize search engines"""
+        self.serper_api_key = os.getenv("SERPER_API_KEY")
+        self.google_api_key = os.getenv("GOOGLE_API_KEY")
+        self.google_cse_id = os.getenv("GOOGLE_CSE_ID")
+        self.timeout = 10
+    
+    def search_with_serper(self, query: str, num_results: int = 10) -> List[Dict[str, str]]:
+        """
+        Search using Serper API (recommended for production)
+        """
+        if not self.serper_api_key:
+            return []
+        
+        try:
+            url = "https://google.serper.dev/search"
+            payload = json.dumps({
+                "q": query,
+                "num": num_results,
+                "autocorrect": True,
+                "page": 1
+            })
+            headers = {
+                'X-API-KEY': self.serper_api_key,
+                'Content-Type': 'application/json'
+            }
+            
+            response = requests.post(url, headers=headers, data=payload, timeout=self.timeout)
+            
+            if response.status_code == 200:
+                data = response.json()
+                results = []
+                
+                # Process organic results
+                for item in data.get("organic", [])[:num_results]:
+                    results.append({
+                        "title": item.get("title", ""),
+                        "url": item.get("link", ""),
+                        "snippet": item.get("snippet", ""),
+                        "source": "serper"
+                    })
+                
+                return results
+        
+        except Exception as e:
+            print(f"Serper API error: {e}")
+        
+        return []
+    
+    def search_with_google_custom(self, query: str, num_results: int = 10) -> List[Dict[str, str]]:
+        """
+        Search using Google Custom Search API
+        """
+        if not self.google_api_key or not self.google_cse_id:
+            return []
+        
+        try:
+            url = "https://www.googleapis.com/customsearch/v1"
+            params = {
+                "q": query,
+                "key": self.google_api_key,
+                "cx": self.google_cse_id,
+                "num": min(10, num_results)
+            }
+            
+            response = requests.get(url, params=params, timeout=self.timeout)
+            
+            if response.status_code == 200:
+                data = response.json()
+                results = []
+                
+                for item in data.get("items", [])[:num_results]:
+                    results.append({
+                        "title": item.get("title", ""),
+                        "url": item.get("link", ""),
+                        "snippet": item.get("snippet", ""),
+                        "source": "google_cse"
+                    })
+                
+                return results
+        
+        except Exception as e:
+            print(f"Google Custom Search error: {e}")
+        
+        return []
+    
+    def search_with_duckduckgo(self, query: str, num_results: int = 10) -> List[Dict[str, str]]:
+        """
+        Fallback search using DuckDuckGo (no API key needed)
+        """
+        try:
+            # Using duckduckgo-search library (add to requirements)
+            from duckduckgo_search import DDGS
+            
+            with DDGS(timeout=self.timeout) as ddgs:
+                results = list(ddgs.text(query, max_results=num_results))
+                
+                formatted_results = []
+                for result in results:
+                    formatted_results.append({
+                        "title": result.get("title", ""),
+                        "url": result.get("href", ""),
+                        "snippet": result.get("body", ""),
+                        "source": "duckduckgo"
+                    })
+                
+                return formatted_results
+        
+        except Exception as e:
+            print(f"DuckDuckGo error: {e}")
+        
+        return []
+    
+    def search(self, query: str, max_results: int = 10) -> List[Dict[str, str]]:
+        """
+        Multi-strategy search with fallbacks
+        Priority: Serper > Google Custom Search > DuckDuckGo
+        """
+        
+        # Try Serper API first
+        results = self.search_with_serper(query, max_results)
+        if results:
+            return results
+        
+        # Fallback to Google Custom Search
+        results = self.search_with_google_custom(query, max_results)
+        if results:
+            return results
+        
+        # Final fallback to DuckDuckGo
+        results = self.search_with_duckduckgo(query, max_results)
+        if results:
+            return results
+        
+        # If all fail, return empty results
+        print(f"Warning: No search results found for '{query}'")
         return []
 
 
-# ============================================================
-# MULTI-QUERY SEARCH
-# ============================================================
+# Global search engine instance
+_search_engine = None
 
-def search_multiple_queries(
-    queries: list,
-    max_results: int = 5
-) -> list:
+
+def get_search_engine() -> SearchEngine:
+    """Get or create search engine instance"""
+    global _search_engine
+    if _search_engine is None:
+        _search_engine = SearchEngine()
+    return _search_engine
+
+
+def search_web(query: str, max_results: int = 10) -> List[Dict[str, str]]:
     """
-    Search multiple queries and combine their results.
-
-    Duplicate URLs are removed and the final results
-    are sorted by relevance score.
-
-    Args:
-        queries: List of search queries.
-        max_results: Maximum results per query.
-
-    Returns:
-        Deduplicated and ranked source list.
+    Simple interface for web search
     """
+    engine = get_search_engine()
+    return engine.search(query, max_results)
 
-    all_sources = []
 
+def process_search_results(results: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    """
+    Process and clean search results
+    """
+    processed = []
     seen_urls = set()
-
-    for query in queries:
-
-        # -----------------------------------------------
-        # Skip invalid queries
-        # -----------------------------------------------
-
-        if not query or not query.strip():
+    
+    for result in results:
+        url = result.get("url", "").strip()
+        
+        # Skip duplicates and invalid URLs
+        if not url or url in seen_urls:
             continue
+        
+        # Skip untrustworthy domains (optional)
+        if any(blocked in url.lower() for blocked in ["reddit.com/r/", "pinterest.com"]):
+            continue
+        
+        seen_urls.add(url)
+        
+        # Clean snippet
+        snippet = result.get("snippet", "").strip()
+        if snippet.endswith("..."):
+            snippet = snippet[:-3].strip()
+        
+        processed.append({
+            "title": result.get("title", "").strip(),
+            "url": url,
+            "snippet": snippet,
+            "source": result.get("source", "unknown")
+        })
+    
+    return processed
 
-        print(
-            f"🔎 Searching: {query}"
-        )
 
-        results = search_web(
-            query,
-            max_results=max_results
-        )
-
-        for result in results:
-
-            url = normalize_url(
-                result.get("url", "")
-            )
-
-            if not url:
-                continue
-
-            # -------------------------------------------
-            # Deduplicate sources
-            # -------------------------------------------
-
-            if url in seen_urls:
-                continue
-
-            seen_urls.add(url)
-
-            all_sources.append(
-                result
-            )
-
-    # ====================================================
-    # FINAL RANKING
-    # ====================================================
-
-    all_sources.sort(
-        key=lambda source: source.get(
-            "score",
-            0
-        ),
-        reverse=True
-    )
-
-    print(
-        f"📚 Collected {len(all_sources)} "
-        f"unique sources."
-    )
-
-    return all_sources
-
+# Example usage
+if __name__ == "__main__":
+    test_query = "artificial intelligence latest developments 2026"
+    
+    print(f"Searching for: {test_query}\n")
+    results = search_web(test_query, max_results=5)
+    
+    for i, result in enumerate(results, 1):
+        print(f"{i}. {result['title']}")
+        print(f"   URL: {result['url']}")
+        print(f"   Source: {result['source']}")
+        print(f"   {result['snippet'][:100]}...\n")
