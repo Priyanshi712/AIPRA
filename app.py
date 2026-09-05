@@ -2,6 +2,8 @@ import streamlit as st
 import time
 from datetime import datetime
 from agent import run_research_agent
+from Voice_Input import get_voice_query
+from Image_input import get_image_query
 
 
 # ============================================================
@@ -268,7 +270,7 @@ render_html(
        ======================================================== */
 
     .topbar {
-        height: 82px;
+        height: 58px;
 
         display: flex;
         align-items: center;
@@ -282,12 +284,12 @@ render_html(
     .brand {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 10px;
     }
 
     .brand-symbol {
-        width: 40px;
-        height: 40px;
+        width: 28px;
+        height: 28px;
 
         border-radius: 9px;
 
@@ -308,22 +310,15 @@ render_html(
     }
 
     .brand-name {
-        font-size: 35px;
-        font-weight: 750;
-        letter-spacing: 1.6px;
-        line-height: 1;
-        display: inline-block;
-        transform: scaleX(1.08);
-        transform-origin: left center;
-        min-width: 118px;
-        color: #f2f5fb;
-        text-shadow: 0 0 24px rgba(91,141,255,0.12);
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.3px;
     }
 
     .brand-status {
-        margin-left: 10px;
+        margin-left: 8px;
 
-        padding: 7px 12px;
+        padding: 5px 9px;
 
         border-radius: 20px;
 
@@ -332,8 +327,7 @@ render_html(
 
         color: #54dca7;
 
-        font-size: 10px;
-        letter-spacing: 0.6px;
+        font-size: 9px;
     }
 
     .top-actions {
@@ -354,34 +348,6 @@ render_html(
         color: #a9b1bd;
 
         font-size: 11px;
-    }
-
-
-    @media (max-width: 700px) {
-        .topbar {
-            height: 70px;
-        }
-
-        .brand {
-            gap: 10px;
-        }
-
-        .brand-symbol {
-            width: 34px;
-            height: 34px;
-        }
-
-        .brand-name {
-            font-size: 35px;
-            min-width: auto;
-            letter-spacing: 1.6px;
-            transform: scaleX(1.08);
-        }
-
-        .brand-status {
-            padding: 6px 9px;
-            font-size: 9px;
-        }
     }
 
 
@@ -1341,9 +1307,9 @@ render_html(
        ======================================================== */
 
     .query-card-open {
-        padding-bottom: 16px;
-        border-bottom-left-radius: 10px;
-        border-bottom-right-radius: 10px;
+        padding-bottom: 30px;
+        border-bottom-left-radius: 30px;
+        border-bottom-right-radius: 30px;
         border-bottom-color: rgba(91,141,255,0.16);
     }
 
@@ -1478,50 +1444,6 @@ render_html(
 
         .query-topline {
             align-items: flex-start;
-        }
-    }
-
-
-
-    /* ========================================================
-       OVERSIZED AIPRA WORDMARK — requested brand emphasis
-       ======================================================== */
-
-    .sidebar-logo-text,
-    .logo-text,
-    .brand-name,
-    .brand-text,
-    .app-name,
-    .brand-wordmark {
-        font-size: 34px !important;
-        font-weight: 800 !important;
-        letter-spacing: 2.2px !important;
-        line-height: 1 !important;
-        transform: scaleX(1.12);
-        transform-origin: left center;
-        display: inline-block !important;
-        white-space: nowrap !important;
-    }
-
-    /* Preserve a clean gap between the enlarged wordmark and status. */
-    .sidebar-logo,
-    .brand,
-    .top-brand,
-    .brand-logo,
-    .header-brand {
-        gap: 18px !important;
-    }
-
-    @media (max-width: 900px) {
-        .sidebar-logo-text,
-        .logo-text,
-        .brand-name,
-        .brand-text,
-        .app-name,
-        .brand-wordmark {
-            font-size: 28px !important;
-            letter-spacing: 1.5px !important;
-            transform: scaleX(1.06);
         }
     }
 
@@ -1807,12 +1729,48 @@ with right:
         unsafe_allow_html=True
     )
 
-    query = st.text_input(
-        "Research question",
-        placeholder="e.g. What are the most promising approaches to…",
+    input_mode = st.radio(
+        "Input method",
+        ["✍️ Type", "🎤 Voice", "📷 Image"],
+        horizontal=True,
         label_visibility="collapsed",
-        key="research_question"
+        key="aipra_input_mode"
     )
+
+    query = ""
+
+    if input_mode == "✍️ Type":
+
+        query = st.text_input(
+            "Research question",
+            placeholder="e.g. What are the most promising approaches to…",
+            label_visibility="collapsed",
+            key="research_question"
+        )
+
+    elif input_mode == "🎤 Voice":
+
+        voice_text = get_voice_query()
+
+        query = st.text_input(
+            "Research question",
+            value=voice_text or "",
+            placeholder="Your transcribed question will appear here — feel free to edit.",
+            label_visibility="collapsed",
+            key="research_question_voice"
+        )
+
+    else:  # 📷 Image
+
+        image_text = get_image_query()
+
+        query = st.text_input(
+            "Research question",
+            value=image_text or "",
+            placeholder="Text extracted from your image will appear here — feel free to edit.",
+            label_visibility="collapsed",
+            key="research_question_image"
+        )
 
     render_html(
         """
