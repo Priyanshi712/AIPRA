@@ -184,9 +184,9 @@ render_html(
     }
 
     .sidebar-logo-text {
-        font-size: 17px;
-        font-weight: 600;
-        letter-spacing: -0.4px;
+        font-size: 26px !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.4px !important;
     }
 
     .sidebar-section {
@@ -310,9 +310,9 @@ render_html(
     }
 
     .brand-name {
-        font-size: 15px;
-        font-weight: 600;
-        letter-spacing: -0.3px;
+        font-size: 26px !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.3px !important;
     }
 
     .brand-status {
@@ -1307,9 +1307,9 @@ render_html(
        ======================================================== */
 
     .query-card-open {
-        padding-bottom: 30px;
-        border-bottom-left-radius: 30px;
-        border-bottom-right-radius: 30px;
+        padding-bottom: 16px;
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
         border-bottom-color: rgba(91,141,255,0.16);
     }
 
@@ -1445,6 +1445,12 @@ render_html(
         .query-topline {
             align-items: flex-start;
         }
+    }
+
+    /* Force AIPRA wordmark size — overrides any earlier rule */
+    .brand-name, .sidebar-logo-text {
+        font-size: 48px !important;
+        font-weight: 800 !important;
     }
 
     </style>
