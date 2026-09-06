@@ -1,133 +1,133 @@
 import os
 import json
 import re
-import google.generativeai as genai
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 
-api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-
-if not api_key:
-    raise ValueError("Gemini API key not found!")
-
-genai.configure(api_key=api_key)
-
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 SUMMARY_MAX_LENGTH = int(os.getenv("SUMMARY_MAX_LENGTH", 1500))
 SUMMARY_MAX_TOKENS = int(os.getenv("SUMMARY_MAX_TOKENS", 800))
 PLAN_MAX_TOKENS = int(os.getenv("PLAN_MAX_TOKENS", 600))
 REPORT_MAX_TOKENS = int(os.getenv("REPORT_MAX_TOKENS", 6000))
 
-model = genai.GenerativeModel(MODEL)
-
-
 
 def clean_llm_output(text: str) -> str:
-    """Removes internal thought traces and raw think tags."""
     if not text:
         return ""
-    # Strip <think>...</think> blocks
     cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
-    # Strip any dangling/unclosed <think> tags
-    cleaned = re.sub(r"^.*?Here's a thinking process:.*?(?=# |\*\*Executive Summary|\n\n)", "", cleaned, flags=re.DOTALL | re.IGNORECASE)
     return cleaned.strip()
 
 
-def _generate(prompt: str, temperature: float, max_tokens: int) -> str:
-    """Helper to call the Gemini API and return raw text."""
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.types.GenerationConfig(
-            temperature=temperature,
-            max_output_tokens=max_tokens,
-        ),
-        request_options={"timeout": 60},
-    )
-    return response.text or ""
+def call_gemini(prompt: str, max_tokens: int) -> str:
+    """Call Gemini via REST API"""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
+    
+    headers = {
+        "Content-Type": "application/json",
+    }
+    
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt}
+                ]
+            }
+        ],
+        "generationConfig": {
+            "maxOutputTokens": max_tokens,
+            "temperature": 0.2,
+        }
+    }
+    
+    try:
+        response = requests.post(
+            url,
+            json=payload,
+            headers=headers,
+            params={"key": GEMINI_API_KEY},
+            timeout=30
+        )
+        response.raise_for_status()
+        
+        data = response.json()
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        return text
+    
+    except Exception as e:
+        print(f"Gemini API Error: {e}")
+        return ""
 
 
 def create_research_plan(question: str, num_queries: int = 3) -> dict:
-    prompt = f"""You are a research planner. Generate {num_queries} distinct, direct search queries to research:
-"{question}"
-
-Rules:
-- Write ONLY the search queries, one per line.
-- Do not include numbering, bullets, quotes, or conversational preamble."""
+    prompt = f"""Generate {num_queries} distinct search queries for: "{question}"
+    
+Only output the queries, one per line."""
 
     try:
-        raw_text = clean_llm_output(_generate(prompt, temperature=0.2, max_tokens=PLAN_MAX_TOKENS))
-        lines = [line.strip().lstrip("0123456789.-*•\"'[] ") for line in raw_text.splitlines() if line.strip()]
-        queries = [
-            q for q in lines
-            if len(q) > 3 and not any(tag in q.lower() for tag in ["think", "role:", "topic:", "analyze", "here"])
-        ]
-
-        if not queries:
-            queries = [question]
-
-        return {"queries": queries[:num_queries]}
-
+        raw_text = call_gemini(prompt, PLAN_MAX_TOKENS)
+        cleaned_text = clean_llm_output(raw_text)
+        
+        lines = [line.strip() for line in cleaned_text.splitlines() if line.strip()]
+        queries = [q for q in lines if len(q) > 3]
+        
+        return {"queries": queries[:num_queries] if queries else [question]}
+    
     except Exception as e:
-        print(f"Error creating research plan: {e}")
+        print(f"Error: {e}")
         return {"queries": [question]}
 
 
 def analyze_sources(question: str, sources: list) -> str:
-    # Deduplicate sources by URL
     seen_urls = set()
     unique_sources = []
+    
     for s in sources:
         url = s.get("url", "")
         if url and url not in seen_urls:
             seen_urls.add(url)
             unique_sources.append(s)
-
-    # Limit to top 6 sources with 500 chars to respect API rate limits
+    
     top_sources = unique_sources[:6]
     formatted_sources = ""
+    
     for i, source in enumerate(top_sources, 1):
-        content_snippet = source.get("content", "No content available")[:500]
+        content_snippet = source.get("content", "")[:500]
         formatted_sources += f"\n[{i}] {source.get('title', 'Untitled')}\n"
         formatted_sources += f"URL: {source.get('url', 'N/A')}\n"
-        formatted_sources += f"Snippet: {content_snippet}...\n"
-        formatted_sources += "-" * 30 + "\n"
+        formatted_sources += f"Content: {content_snippet}\n"
 
-    prompt = f"""You are an expert research analyst. Write a research report directly answering: "{question}"
+    prompt = f"""Analyze and write a research report for: "{question}"
 
-Use only the provided web evidence:
+Sources:
 {formatted_sources}
 
-Respond strictly in markdown matching this structure:
+Respond with:
 # Research Report
-
 ## Executive Summary
-(2-3 sentences answering the research question directly)
-
 ## Key Findings
-(Detailed points citing sources using [1], [2], etc.)
-
-## Limitations & Key Takeaways
-(Key implications and limitations from the findings)
-
-## Sources
-(List format: [1] [Title](URL))"""
+## Sources"""
 
     try:
-        raw_report = _generate(prompt, temperature=0.2, max_tokens=REPORT_MAX_TOKENS)
-        return clean_llm_output(raw_report)
-
+        report = call_gemini(prompt, REPORT_MAX_TOKENS)
+        return clean_llm_output(report)
+    
     except Exception as e:
-        print(f"Error analyzing sources: {e}")
-        return f"Error generating report: {e}"
+        print(f"Error: {e}")
+        return f"Error: {e}"
 
 
 def generate_summary(text: str, max_length: int = None) -> str:
     max_length = max_length or SUMMARY_MAX_LENGTH
-    prompt = f"Summarize this text in under {max_length} characters. Return ONLY the summary:\n\n{text}"
+    prompt = f"Summarize in {max_length} characters:\n\n{text}"
+    
     try:
-        raw_summary = _generate(prompt, temperature=0.2, max_tokens=SUMMARY_MAX_TOKENS)
-        return clean_llm_output(raw_summary)
+        summary = call_gemini(prompt, SUMMARY_MAX_TOKENS)
+        return clean_llm_output(summary)[:max_length]
+    
     except Exception as e:
-        print(f"Error generating summary: {e}")
+        print(f"Error: {e}")
         return text[:max_length]
