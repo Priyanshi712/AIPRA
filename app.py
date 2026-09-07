@@ -1624,7 +1624,7 @@ render_html(
         </div>
 
         <div class="hero-subtitle">
-            Turn complex questions into a focused evidence trail—planned, sourced, and synthesized by AIPRA.
+            A PERSONAL SEARCH ENGINE FOR DEEP, EVIDENCE-BASED INSIGHTS.
         </div>
 
     </div>
