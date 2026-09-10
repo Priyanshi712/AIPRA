@@ -1465,6 +1465,25 @@ render_html(
 
 with st.sidebar:
 
+    if st.session_state.research_history:
+        st.markdown("### 📈 Quick Stats")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Total Queries", st.session_state.total_queries)
+        with col2:
+            st.metric("Level", get_level())
+        
+        total_findings = sum(r.get('findings', 0) for r in st.session_state.research_history)
+        st.metric("Total Findings", total_findings)
+        
+        if st.button("🗑️ Clear History"):
+            st.session_state.research_history = []
+            st.session_state.total_queries = 0
+            st.rerun()
+        
+        st.markdown("---")
+
     render_html(
         """
         <div class="sidebar-logo">
@@ -2223,7 +2242,7 @@ if st.session_state.last_result is not None:
         with col3:
             if st.button("⭐ Save to Favorites"):
                 st.success("Saved!")
-                
+
 
     # --------------------------------------------------------
     # SOURCES
