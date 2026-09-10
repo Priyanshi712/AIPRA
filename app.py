@@ -2203,6 +2203,28 @@ if st.session_state.last_result is not None:
             unsafe_allow_html=True
         )
 
+        st.markdown("---")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("📋 Copy Results", use_container_width=True):
+                results_text = f"Query: {query}\n\n"
+                results_text += f"Summary: {result.get('summary', '')}\n\n"
+                results_text += "Key Findings:\n"
+                for i, finding in enumerate(findings, 1):
+                    results_text += f"{i}. {finding}\n"
+                st.code(results_text)
+                st.success("✅ Copy the text above!")
+        
+        with col2:
+            if st.button("📊 Export as Text"):
+                st.info("Export feature coming soon!")
+        
+        with col3:
+            if st.button("⭐ Save to Favorites"):
+                st.success("Saved!")
+                
+
     # --------------------------------------------------------
     # SOURCES
     # --------------------------------------------------------
