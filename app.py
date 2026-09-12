@@ -1481,6 +1481,13 @@ with st.sidebar:
             st.session_state.research_history = []
             st.session_state.total_queries = 0
             st.rerun()
+
+        if st.session_state.research_history:
+            st.markdown("---")
+            last_query = st.session_state.research_history[-1]['query']
+            if st.button(f"🔄 Reload: {last_query[:40]}..."):
+                st.session_state.last_query = last_query
+                st.rerun()
         
         st.markdown("---")
 
