@@ -65,8 +65,8 @@ async def run_research_agent_async(question: str, depth: str = "Standard", num_s
     # Step 3: Analyze sources and generate report
     report = analyze_sources(question, all_sources)
     
-    # Step 4: Generate summary
-    summary = generate_summary(report, max_length=300)
+    # Step 4: Generate summary with ample length for full explanations
+    summary = generate_summary(report, max_length=1000)
     
     # Step 5: Extract findings from report
     findings = extract_findings_from_report(report)
@@ -103,9 +103,9 @@ def extract_findings_from_report(report: str) -> List[str]:
     """
     Extract key findings from the research report
     """
+    import re
     findings = []
     
-    # Split by bullet points or numbered lists
     lines = report.split('\n')
     current_finding = []
     
@@ -121,16 +121,17 @@ def extract_findings_from_report(report: str) -> List[str]:
                 current_finding = []
             continue
         
-        # Detect bullet points and numbered items
-        if any(line.startswith(x) for x in ['-', '•', '*', '1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.']):
+        # Detect bullet points and numbered items cleanly without stripping markdown asterisks
+        bullet_match = re.match(r"^([-•*]\s+|\d+[\.)]\s+)", line)
+        if bullet_match:
             if current_finding:
                 finding_text = ' '.join(current_finding).strip()
                 if finding_text and len(finding_text) > 20:
                     findings.append(finding_text)
                 current_finding = []
-            line = line.lstrip('-•* 0123456789.').strip()
-            if line:
-                current_finding.append(line)
+            line_content = line[bullet_match.end():].strip()
+            if line_content:
+                current_finding.append(line_content)
         elif current_finding:
             current_finding.append(line)
     
@@ -140,8 +141,14 @@ def extract_findings_from_report(report: str) -> List[str]:
         if finding_text and len(finding_text) > 20:
             findings.append(finding_text)
     
-    # Return top 5 findings, each limited to 250 chars
-    return [f[:250] for f in findings[:5] if f]
+    # Format markdown bolding to HTML strong and cap to reasonable reading length
+    clean_findings = []
+    for f in findings[:6]:
+        # Convert **Label**: to <strong>Label</strong>: for clean display
+        formatted = re.sub(r"\*\*(.*?)\*\*:", r"<strong>\1</strong>:", f)
+        clean_findings.append(formatted)
+        
+    return clean_findings
 
 
 def validate_research_result(result: Dict[str, Any]) -> bool:
