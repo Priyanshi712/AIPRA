@@ -122,7 +122,12 @@ def extract_findings_from_report(report: str) -> List[str]:
             continue
         
         # Detect bullet points and numbered items
-        if any(line.startswith(x) for x in ['-', '•', '*', '1.', '2.', '3.']):
+        if any(line.startswith(x) for x in ['-', '•', '*', '1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.']):
+            if current_finding:
+                finding_text = ' '.join(current_finding).strip()
+                if finding_text and len(finding_text) > 20:
+                    findings.append(finding_text)
+                current_finding = []
             line = line.lstrip('-•* 0123456789.').strip()
             if line:
                 current_finding.append(line)

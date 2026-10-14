@@ -6,6 +6,9 @@ Handles searching with fallback strategies and result processing
 
 import os
 import json
+import re
+import html
+import urllib.parse
 from typing import List, Dict, Any
 import requests
 from dotenv import load_dotenv
@@ -130,10 +133,66 @@ class SearchEngine:
         
         return []
     
+    def search_with_wikipedia(self, query: str, num_results: int = 5) -> List[Dict[str, str]]:
+        """
+        Reliable open-encyclopedia fallback search using Wikipedia API.
+        Does not require any API keys and works even when search engines block scraping.
+        """
+        try:
+            url = "https://en.wikipedia.org/w/api.php"
+            params = {
+                "action": "query",
+                "list": "search",
+                "srsearch": query,
+                "format": "json",
+                "utf8": 1,
+                "srlimit": num_results
+            }
+            headers = {"User-Agent": "AIPRA-ResearchAgent/1.0"}
+            response = requests.get(url, params=params, headers=headers, timeout=self.timeout)
+            if response.status_code != 200:
+                return []
+            
+            data = response.json()
+            items = data.get("query", {}).get("search", [])
+            results = []
+            
+            for item in items:
+                title = item.get("title", "")
+                raw_snippet = item.get("snippet", "")
+                clean_snippet = re.sub(r"<.*?>", "", html.unescape(raw_snippet)).strip()
+                content = clean_snippet
+                
+                # Fetch summary extract for deeper evidence
+                try:
+                    slug = urllib.parse.quote(title)
+                    summary_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{slug}"
+                    sum_res = requests.get(summary_url, headers=headers, timeout=5)
+                    if sum_res.status_code == 200:
+                        extract = sum_res.json().get("extract", "")
+                        if extract:
+                            content = extract
+                except Exception:
+                    pass
+                
+                encoded_title = urllib.parse.quote(title.replace(" ", "_"))
+                results.append({
+                    "title": title,
+                    "url": f"https://en.wikipedia.org/wiki/{encoded_title}",
+                    "snippet": clean_snippet,
+                    "content": content[:600],
+                    "source": "wikipedia"
+                })
+            
+            return results
+        except Exception as e:
+            print(f"Wikipedia search error: {e}")
+            return []
+
     def search(self, query: str, max_results: int = 10) -> List[Dict[str, str]]:
         """
         Multi-strategy search with fallbacks
-        Priority: Serper > Google Custom Search > DuckDuckGo
+        Priority: Serper > Google Custom Search > DuckDuckGo > Wikipedia
         """
         
         # Try Serper API first
@@ -146,11 +205,16 @@ class SearchEngine:
         if results:
             return results
         
-        # Final fallback to DuckDuckGo
+        # Fallback to DuckDuckGo
         results = self.search_with_duckduckgo(query, max_results)
         if results:
             return results
         
+        # Reliable fallback to Wikipedia
+        results = self.search_with_wikipedia(query, max_results)
+        if results:
+            return results
+
         # If all fail, return empty results
         print(f"Warning: No search results found for '{query}'")
         return []

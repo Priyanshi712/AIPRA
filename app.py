@@ -7,6 +7,7 @@ if __name__ == "__main__" and not st_runtime_exists():
     sys.argv = ["streamlit", "run", sys.argv[0]]
     sys.exit(stcli.main())
 
+import os
 import streamlit as st
 import time
 from datetime import datetime
@@ -1604,6 +1605,25 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
+
+    render_html(
+        '<div class="sidebar-section">AI Configuration</div>',
+        unsafe_allow_html=True
+    )
+    current_key = os.getenv("GEMINI_API_KEY", "")
+    gemini_key_input = st.text_input(
+        "Gemini API Key",
+        value=st.session_state.get("gemini_api_key", current_key),
+        type="password",
+        placeholder="AIzaSy...",
+        help="Optional: Add your Gemini API key for generative synthesis. Leave blank for automatic web extraction mode."
+    )
+    if gemini_key_input:
+        st.session_state["gemini_api_key"] = gemini_key_input
+        os.environ["GEMINI_API_KEY"] = gemini_key_input
+        st.caption("🟢 Gemini AI Enabled")
+    else:
+        st.caption("⚡ Evidence Extraction Mode (Active)")
 
 
 # ============================================================
