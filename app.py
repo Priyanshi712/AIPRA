@@ -1,3 +1,12 @@
+import sys
+from streamlit.web import cli as stcli
+from streamlit.runtime import exists as st_runtime_exists
+
+# Auto-launch via 'streamlit run' if invoked directly with 'python app.py'
+if __name__ == "__main__" and not st_runtime_exists():
+    sys.argv = ["streamlit", "run", sys.argv[0]]
+    sys.exit(stcli.main())
+
 import streamlit as st
 import time
 from datetime import datetime
@@ -6,17 +15,17 @@ from Voice_Input import get_voice_query
 from Image_input import get_image_query
 
 
-# ============================================================
-# HTML RENDERER
-# ============================================================
-# Use Streamlit's native HTML renderer when available. This prevents
-# HTML from being displayed as literal text/code in newer Streamlit versions.
-# The fallback keeps compatibility with older Streamlit releases.
 def render_html(content, **kwargs):
     if hasattr(st, "html"):
         st.html(content)
     else:
-        st.markdown(content, unsafe_allow_html=True)
+        # In Streamlit versions without st.html (<1.33), st.markdown(unsafe_allow_html=True)
+        # interprets 4+ space indentation after blank lines as Markdown code blocks.
+        # Stripping leading/trailing whitespace per line and removing empty lines ensures
+        # the entire string is parsed as an unbroken HTML block.
+        cleaned_lines = [line.strip() for line in str(content).splitlines() if line.strip()]
+        cleaned_content = "\n".join(cleaned_lines)
+        st.markdown(cleaned_content, unsafe_allow_html=True)
 
 
 
@@ -1465,16 +1474,16 @@ render_html(
 
 with st.sidebar:
 
-    if st.session_state.research_history:
+    if st.session_state.get("research_history"):
         st.markdown("### 📈 Quick Stats")
         
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("Total Queries", st.session_state.total_queries)
+            st.metric("Total Queries", st.session_state.get("total_queries", 0))
         with col2:
             st.metric("Level", get_level())
         
-        total_findings = sum(r.get('findings', 0) for r in st.session_state.research_history)
+        total_findings = sum(r.get('findings', 0) for r in st.session_state.get("research_history", []))
         st.metric("Total Findings", total_findings)
         
         if st.button("🗑️ Clear History"):
@@ -1482,7 +1491,7 @@ with st.sidebar:
             st.session_state.total_queries = 0
             st.rerun()
 
-        if st.session_state.research_history:
+        if st.session_state.get("research_history"):
             st.markdown("---")
             last_query = st.session_state.research_history[-1]['query']
             if st.button(f"🔄 Reload: {last_query[:40]}..."):
@@ -1531,10 +1540,10 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-    if st.session_state.research_history:
+    if st.session_state.get("research_history"):
 
         for entry in reversed(
-            st.session_state.research_history[-6:]
+            st.session_state.get("research_history", [])[-6:]
         ):
 
             render_html(
