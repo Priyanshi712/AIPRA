@@ -10,9 +10,9 @@ from llm import create_research_plan, analyze_sources, generate_summary
 from search import search_web
 
 
-async def run_research_agent_async(question: str, depth: str = "Standard", num_sources: int = 6) -> Dict[str, Any]:
+def run_research_agent(question: str, depth: str = "Standard", num_sources: int = 6) -> Dict[str, Any]:
     """
-    Main research orchestration function (async version for better performance)
+    Main research orchestration function
     
     Args:
         question: User's research question
@@ -86,17 +86,11 @@ async def run_research_agent_async(question: str, depth: str = "Standard", num_s
     return result
 
 
-def run_research_agent(question: str, depth: str = "Standard", num_sources: int = 6) -> Dict[str, Any]:
+async def run_research_agent_async(question: str, depth: str = "Standard", num_sources: int = 6) -> Dict[str, Any]:
     """
-    Synchronous wrapper for research agent
+    Asynchronous compatibility wrapper for research agent
     """
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    
-    return loop.run_until_complete(run_research_agent_async(question, depth, num_sources))
+    return run_research_agent(question, depth, num_sources)
 
 
 def extract_findings_from_report(report: str) -> List[str]:
