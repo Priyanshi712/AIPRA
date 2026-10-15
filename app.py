@@ -2096,6 +2096,26 @@ if st.session_state.last_result is not None:
         "summary",
         "No summary was generated."
     )
+    detailed_analysis = result.get("detailed_analysis", "")
+    source_comparison = result.get("source_comparison", "")
+    conclusion = result.get("conclusion", "")
+    full_report = result.get("report", "")
+
+    # Helper to style paragraphs and interactive citations
+    def format_synthesis_html(text: str, sources_list: list) -> str:
+        if not text:
+            return "<p>No synthesis generated.</p>"
+        paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+        formatted_paras = []
+        for p in paragraphs:
+            for idx, s in enumerate(sources_list, 1):
+                url = s.get("url", "#")
+                title = s.get("title", f"Source {idx}")
+                citation_badge = f"<a href='{url}' target='_blank' title='{title}' style='color:#5f8fff; background:rgba(95,143,255,0.14); padding:2px 7px; border-radius:5px; text-decoration:none; font-weight:600; font-size:12px; margin:0 3px;'>[{idx}]</a>"
+                p = re.sub(rf"\[{idx}\]", citation_badge, p)
+            p = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", p)
+            formatted_paras.append(f"<p style='margin-bottom:14px; line-height:1.85;'>{p}</p>")
+        return "".join(formatted_paras)
 
     # --------------------------------------------------------
     # RESULT HEADER
@@ -2111,7 +2131,8 @@ if st.session_state.last_result is not None:
 
             <div class="results-count">
                 {len(findings)} findings ·
-                {len(sources)} sources
+                {len(sources)} sources ·
+                {depth}
             </div>
 
         </div>
@@ -2120,8 +2141,10 @@ if st.session_state.last_result is not None:
     )
 
     # --------------------------------------------------------
-    # SUMMARY
+    # EXECUTIVE SUMMARY & SYNTHESIS
     # --------------------------------------------------------
+
+    formatted_summary = format_synthesis_html(summary, sources)
 
     render_html(
         f"""
@@ -2133,19 +2156,20 @@ if st.session_state.last_result is not None:
 
             <div style="
                 color:#e8edf5;
-                font-size:15px;
-                margin-bottom:18px;
+                font-size:16px;
+                font-weight:600;
+                margin-bottom:20px;
                 line-height:1.5;
             ">
                 {st.session_state.last_query}
             </div>
 
             <div class="summary-query">
-                AI Synthesis
+                Executive Synthesis
             </div>
 
-            <div class="summary-text">
-                {summary}
+            <div class="summary-text" style="color:#cbd2dc; font-size:14.5px;">
+                {formatted_summary}
             </div>
 
         </div>
@@ -2154,7 +2178,7 @@ if st.session_state.last_result is not None:
     )
 
     # --------------------------------------------------------
-    # METRICS
+    # METRICS ROW
     # --------------------------------------------------------
 
     render_html(
@@ -2177,7 +2201,7 @@ if st.session_state.last_result is not None:
                 </div>
 
                 <div class="stat-label">
-                    Sources
+                    Verified Sources
                 </div>
             </div>
 
@@ -2207,27 +2231,27 @@ if st.session_state.last_result is not None:
     )
 
     # --------------------------------------------------------
-    # FINDINGS
+    # KEY FINDINGS
     # --------------------------------------------------------
 
-    if findings:
+    render_html(
+        """
+        <div class="results-header">
 
-        render_html(
-            """
-            <div class="results-header">
-
-                <div class="results-title">
-                    Key Findings
-                </div>
-
-                <div class="results-count">
-                    Synthesized Insights
-                </div>
-
+            <div class="results-title">
+                Key Findings
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+
+            <div class="results-count">
+                Synthesized Insights
+            </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    if findings:
 
         render_html(
             '<div class="finding-grid">',
@@ -2244,7 +2268,7 @@ if st.session_state.last_result is not None:
                         {i:02d}
                     </div>
 
-                    <div class="finding-text">
+                    <div class="finding-text" style="line-height:1.75; font-size:13.5px; color:#d4dce7;">
                         {finding}
                     </div>
 
@@ -2258,44 +2282,145 @@ if st.session_state.last_result is not None:
             unsafe_allow_html=True
         )
 
-        st.markdown("---")
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("📋 Copy Results", use_container_width=True):
-                results_text = f"Query: {query}\n\n"
-                results_text += f"Summary: {result.get('summary', '')}\n\n"
-                results_text += "Key Findings:\n"
-                for i, finding in enumerate(findings, 1):
-                    results_text += f"{i}. {finding}\n"
-                st.code(results_text)
-                st.success("✅ Copy the text above!")
-        
-        with col2:
-            if st.button("📊 Export as Text"):
-                st.info("Export feature coming soon!")
-        
-        with col3:
-            if st.button("⭐ Save to Favorites"):
-                st.success("Saved!")
-
+    else:
+        render_html(
+            """
+            <div class="summary-card" style="border-left: 3px solid #ffaa44; margin-bottom:25px;">
+                <div style="color:#ffaa44; font-weight:600; font-size:14px; margin-bottom:6px;">
+                    No Distinct Key Findings Isolated
+                </div>
+                <div style="color:#9aa6b7; font-size:13px; line-height:1.6;">
+                    The retrieved evidence sources did not contain enough isolated structured points to generate individual finding cards. Review the Executive Synthesis above or expand the Detailed Analysis below.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     # --------------------------------------------------------
-    # SOURCES
+    # DETAILED ANALYSIS & CROSS-SOURCE PERSPECTIVES (EXPANDABLE)
+    # --------------------------------------------------------
+
+    with st.expander("📖 Detailed Analysis, Perspectives & Limitations", expanded=(depth == "Deep Analysis")):
+        
+        if detailed_analysis and detailed_analysis != summary:
+            st.markdown("### Thematic Analysis")
+            st.markdown(detailed_analysis)
+            st.markdown("---")
+        
+        if source_comparison:
+            st.markdown("### Cross-Source Comparison & Evidential Limits")
+            st.markdown(source_comparison)
+            st.markdown("---")
+            
+        if conclusion:
+            st.markdown("### Concluding Assessment")
+            st.markdown(conclusion)
+
+    st.markdown("<div style='height:15px;'></div>", unsafe_allow_html=True)
+
+    # --------------------------------------------------------
+    # ACTION CONTROLS & EXPORT
+    # --------------------------------------------------------
+
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📋 Copy Results", use_container_width=True):
+            clean_findings_text = "\n".join(
+                f"{i}. " + re.sub(r"<.*?>", "", str(f))
+                for i, f in enumerate(findings, 1)
+            )
+            clean_sources_text = "\n".join(
+                f"[{i}] {s.get('title')} ({s.get('url')})"
+                for i, s in enumerate(sources, 1)
+            )
+            export_doc = f"""# AIPRA Research Brief
+**Query:** {st.session_state.last_query}
+**Depth:** {depth}
+**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}
+
+## Executive Summary
+{summary}
+
+## Key Findings
+{clean_findings_text}
+
+## Detailed Analysis
+{detailed_analysis}
+
+## Cross-Source Comparison & Limitations
+{source_comparison}
+
+## Conclusion
+{conclusion}
+
+## References
+{clean_sources_text}
+"""
+            st.code(export_doc, language="markdown")
+            st.success("✅ Complete research brief generated above!")
+
+    with col2:
+        clean_findings_text = "\n".join(
+            f"{i}. " + re.sub(r"<.*?>", "", str(f))
+            for i, f in enumerate(findings, 1)
+        )
+        clean_sources_text = "\n".join(
+            f"[{i}] {s.get('title')} ({s.get('url')})"
+            for i, s in enumerate(sources, 1)
+        )
+        download_doc = f"""# AIPRA Research Report
+**Research Question:** {st.session_state.last_query}
+**Depth:** {depth}
+**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+## Executive Summary
+{summary}
+
+## Key Findings
+{clean_findings_text}
+
+## Detailed Analysis
+{detailed_analysis}
+
+## Source Comparison & Limitations
+{source_comparison}
+
+## Conclusion
+{conclusion}
+
+## Verified Sources
+{clean_sources_text}
+"""
+        st.download_button(
+            label="📊 Download Report (.md)",
+            data=download_doc,
+            file_name=f"AIPRA_Research_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
+            mime="text/markdown",
+            use_container_width=True
+        )
+
+    with col3:
+        if st.button("⭐ Save to Favorites", use_container_width=True):
+            st.success("Research saved to session history!")
+
+    # --------------------------------------------------------
+    # EVIDENCE & RESEARCH SOURCES
     # --------------------------------------------------------
 
     if sources:
 
         render_html(
             """
-            <div class="results-header">
+            <div class="results-header" style="margin-top:30px;">
 
                 <div class="results-title">
-                    Evidence
+                    Evidence & Sources
                 </div>
 
                 <div class="results-count">
-                    Research Sources
+                    Verified Citations
                 </div>
 
             </div>
@@ -2303,24 +2428,23 @@ if st.session_state.last_result is not None:
             unsafe_allow_html=True
         )
 
-        for idx, source in enumerate(
-            sources[:10],
-            1
-        ):
+        for idx, source in enumerate(sources[:10], 1):
 
-            url = source.get(
-                "url",
-                "#"
-            )
+            url = source.get("url", "#")
+            title = source.get("title", "Untitled Source")
+            snippet = source.get("snippet", "")
+            is_extracted = source.get("is_page_extracted", False)
+            
+            # Domain extraction
+            try:
+                domain = urllib.parse.urlparse(url).netloc.replace("www.", "")
+            except Exception:
+                domain = "Web Source"
 
-            title = source.get(
-                "title",
-                "Untitled Source"
-            )
-
-            snippet = source.get(
-                "snippet",
-                ""
+            badge_html = (
+                '<span style="background:rgba(40,200,100,0.15); color:#48d28a; font-size:10px; padding:2px 8px; border-radius:6px; border:1px solid rgba(40,200,100,0.25); font-weight:600; margin-left:8px;">PAGE VERIFIED</span>'
+                if is_extracted
+                else '<span style="background:rgba(255,255,255,0.06); color:#8c99aa; font-size:10px; padding:2px 8px; border-radius:6px; margin-left:8px;">SEARCH SNIPPET</span>'
             )
 
             render_html(
@@ -2336,10 +2460,10 @@ if st.session_state.last_result is not None:
                         <div>
 
                             <div class="source-number">
-                                SOURCE {idx:02d}
+                                SOURCE {idx:02d} · <span style="color:#5f8fff;">{domain}</span> {badge_html}
                             </div>
 
-                            <div class="source-title">
+                            <div class="source-title" style="margin-top:6px;">
                                 {title}
                             </div>
 
@@ -2359,13 +2483,14 @@ if st.session_state.last_result is not None:
                     </div>
 
                     <div class="source-snippet">
-                        {snippet[:220]}
+                        {snippet[:280]}
                     </div>
 
                 </a>
                 """,
                 unsafe_allow_html=True
             )
+
 
 
 # ============================================================
