@@ -360,6 +360,13 @@ render_html(
         color: #a9b1bd;
 
         font-size: 11px;
+
+        transition: all 0.2s ease;
+    }
+
+    .top-pill:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
     }
 
 
@@ -1656,6 +1663,14 @@ render_html(
                 v2.0 · Research workspace
             </div>
 
+            <a href="https://github.com/Priyanshi712/AIPRA/archive/refs/heads/main.zip" target="_blank" class="top-pill" style="text-decoration:none; color:#8cb4ff; border-color:rgba(95,143,255,0.3); background:rgba(95,143,255,0.08); font-weight:500; display:inline-flex; align-items:center; gap:6px;">
+                <span>⬇️</span> Download Code (ZIP)
+            </a>
+
+            <a href="https://github.com/Priyanshi712/AIPRA" target="_blank" class="top-pill" style="text-decoration:none; color:#cfd8e3; border-color:rgba(255,255,255,0.12); display:inline-flex; align-items:center; gap:6px;">
+                <span>⭐</span> GitHub
+            </a>
+
         </div>
 
     </div>
@@ -2512,6 +2527,11 @@ render_html(
         text-transform:uppercase;
     ">
         AIPRA · Autonomous Intelligence Platform · Research powered by AI
+        <div style="margin-top:10px; display:flex; gap:16px; justify-content:center; text-transform:none; letter-spacing:normal;">
+            <a href="https://github.com/Priyanshi712/AIPRA/archive/refs/heads/main.zip" target="_blank" style="color:#6c8db5; text-decoration:none; font-size:11px;">⬇️ Download Source Code (.zip)</a>
+            <span style="color:#3a4659;">•</span>
+            <a href="https://github.com/Priyanshi712/AIPRA" target="_blank" style="color:#6c8db5; text-decoration:none; font-size:11px;">⭐ View on GitHub</a>
+        </div>
     </div>
     """,
     unsafe_allow_html=True
