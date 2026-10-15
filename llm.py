@@ -6,9 +6,23 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def get_env_or_secret(key: str, default: str = "") -> str:
+    val = os.getenv(key)
+    if val:
+        return val
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets") and key in st.secrets:
+            return str(st.secrets[key])
+    except Exception:
+        pass
+    return default
+
+
 def get_gemini_api_key() -> str:
-    """Retrieve Gemini API key from environment"""
-    return os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
+    """Retrieve Gemini API key from environment or Streamlit secrets"""
+    return get_env_or_secret("GEMINI_API_KEY") or get_env_or_secret("GOOGLE_API_KEY") or ""
+
 
 MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 SUMMARY_MAX_LENGTH = int(os.getenv("SUMMARY_MAX_LENGTH", 1500))

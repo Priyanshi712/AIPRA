@@ -15,6 +15,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def get_env_or_secret(key: str, default: str = "") -> str:
+    val = os.getenv(key)
+    if val:
+        return val
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets") and key in st.secrets:
+            return str(st.secrets[key])
+    except Exception:
+        pass
+    return default
+
+
 class SearchEngine:
     """
     Multi-strategy search engine with fallbacks
@@ -22,9 +35,9 @@ class SearchEngine:
     
     def __init__(self):
         """Initialize search engines"""
-        self.serper_api_key = os.getenv("SERPER_API_KEY")
-        self.google_api_key = os.getenv("GOOGLE_API_KEY")
-        self.google_cse_id = os.getenv("GOOGLE_CSE_ID")
+        self.serper_api_key = get_env_or_secret("SERPER_API_KEY")
+        self.google_api_key = get_env_or_secret("GOOGLE_API_KEY")
+        self.google_cse_id = get_env_or_secret("GOOGLE_CSE_ID")
         self.timeout = 10
     
     def search_with_serper(self, query: str, num_results: int = 10) -> List[Dict[str, str]]:
