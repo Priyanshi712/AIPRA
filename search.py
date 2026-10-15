@@ -9,8 +9,10 @@ import json
 import re
 import html
 import urllib.parse
+import concurrent.futures
 from typing import List, Dict, Any
 import requests
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -253,22 +255,41 @@ def search_web(query: str, max_results: int = 10) -> List[Dict[str, str]]:
     return engine.search(query, max_results)
 
 
+def normalize_url(url: str) -> str:
+    """Strip tracking params and normalize trailing slash for deduplication"""
+    try:
+        parsed = urllib.parse.urlparse(url)
+        # Filter tracking query parameters
+        clean_qs = [
+            (k, v) for k, v in urllib.parse.parse_qsl(parsed.query)
+            if not k.lower().startswith(("utm_", "ref", "fbclid", "gclid"))
+        ]
+        new_query = urllib.parse.urlencode(clean_qs)
+        clean_path = parsed.path.rstrip("/")
+        normalized = urllib.parse.urlunparse((parsed.scheme, parsed.netloc.lower(), clean_path, parsed.params, new_query, ""))
+        return normalized or url
+    except Exception:
+        return url
+
+
 def process_search_results(results: List[Dict[str, str]]) -> List[Dict[str, str]]:
     """
-    Process and clean search results
+    Process, clean, and deduplicate search results
     """
     processed = []
     seen_urls = set()
     
     for result in results:
-        url = result.get("url", "").strip()
-        
-        # Skip duplicates and invalid URLs
-        if not url or url in seen_urls:
+        raw_url = result.get("url", "").strip()
+        if not raw_url:
             continue
         
-        # Skip untrustworthy domains (optional)
-        if any(blocked in url.lower() for blocked in ["reddit.com/r/", "pinterest.com"]):
+        url = normalize_url(raw_url)
+        if url in seen_urls:
+            continue
+        
+        # Skip untrustworthy or social media aggregators that block scrapers
+        if any(blocked in url.lower() for blocked in ["reddit.com/r/", "pinterest.com", "tiktok.com", "instagram.com"]):
             continue
         
         seen_urls.add(url)
@@ -279,13 +300,108 @@ def process_search_results(results: List[Dict[str, str]]) -> List[Dict[str, str]
             snippet = snippet[:-3].strip()
         
         processed.append({
-            "title": result.get("title", "").strip(),
-            "url": url,
+            "title": result.get("title", "").strip() or "Untitled Source",
+            "url": raw_url,
             "snippet": snippet,
-            "source": result.get("source", "unknown")
+            "content": result.get("content") or snippet,
+            "source": result.get("source", "unknown"),
+            "is_page_extracted": result.get("is_page_extracted", False)
         })
     
     return processed
+
+
+def fetch_page_content(url: str, timeout: int = 5) -> str:
+    """
+    Fetch and clean text content from a web page using BeautifulSoup.
+    Removes navigation, headers, footers, scripts, styles, and cookie notices.
+    Returns cleaned article/body text up to 2,500 characters, or empty string on failure.
+    """
+    if not url or not url.startswith(("http://", "https://")):
+        return ""
+    
+    lower_url = url.lower().split("?")[0]
+    if lower_url.endswith((".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".mp3", ".zip", ".tar", ".gz")):
+        return ""
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=timeout, allow_redirects=True)
+        if response.status_code != 200:
+            return ""
+        
+        content_type = response.headers.get("Content-Type", "").lower()
+        if "text/html" not in content_type and "application/xhtml" not in content_type:
+            return ""
+        
+        soup = BeautifulSoup(response.text, "html.parser")
+        
+        # Remove noisy non-content elements and boilerplate tables
+        for tag in soup(["script", "style", "nav", "header", "footer", "aside", "form", "svg", "iframe", "noscript", "dialog", "table"]):
+            tag.decompose()
+        
+        # Strip common boilerplate layout classes (Wikipedia and news sidebars/infoboxes)
+        for noise in soup.find_all(class_=["sidebar", "navbox", "infobox", "toc", "thumb", "metadata", "mw-editsection", "noprint", "mw-jump-link", "mw-empty-elt"]):
+            noise.decompose()
+        
+        paragraphs = []
+        for p in soup.find_all("p"):
+            text = p.get_text(" ", strip=True)
+            # Filter short fragments and cookie/legal notices
+            if len(text) > 50 and not any(kw in text.lower() for kw in ["cookie", "terms of", "privacy policy", "all rights reserved", "subscribe"]):
+                paragraphs.append(text)
+                if sum(len(p) for p in paragraphs) > 2800:
+                    break
+        
+        if paragraphs:
+            return "\n\n".join(paragraphs)[:2800]
+        
+        # Fallback to general article sections if <p> tags were minimal
+        for sec in soup.find_all(["article", "section"]):
+            text = sec.get_text(" ", strip=True)
+            if len(text) > 80:
+                return text[:2500]
+        
+        body_text = " ".join(soup.stripped_strings)
+        return body_text[:2000] if len(body_text) > 60 else ""
+        
+    except Exception:
+        return ""
+
+
+def enrich_sources_with_content(sources: List[Dict[str, Any]], max_workers: int = 5, timeout: int = 5) -> List[Dict[str, Any]]:
+    """
+    Concurrently fetch real web page content for sources to provide rich substance for research.
+    """
+    def _fetch_one(source):
+        # If content already has deep extract (e.g. Wikipedia summary extract), verify length
+        existing = source.get("content", "")
+        if existing and len(existing) > 500:
+            source["is_page_extracted"] = True
+            return source
+        
+        url = source.get("url", "")
+        page_text = fetch_page_content(url, timeout=timeout)
+        if page_text and len(page_text) > 120:
+            source["content"] = page_text
+            source["is_page_extracted"] = True
+        else:
+            source["content"] = source.get("snippet", "")
+            source["is_page_extracted"] = False
+        return source
+
+    if not sources:
+        return []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(max_workers, len(sources))) as executor:
+        enriched = list(executor.map(_fetch_one, sources))
+    return enriched
+
 
 
 # Example usage
