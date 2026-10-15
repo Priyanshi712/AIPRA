@@ -9,13 +9,42 @@ if __name__ == "__main__" and not st_runtime_exists():
 
 import os
 import re
+import base64
 import urllib.parse
+from PIL import Image
 import streamlit as st
 import time
 from datetime import datetime
 from agent import run_research_agent
 from Voice_Input import get_voice_query
 from Image_input import get_image_query
+
+_ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
+_LOGO_PATH = os.path.join(_ASSETS_DIR, "logo_square.png")
+
+
+def get_page_icon():
+    if os.path.exists(_LOGO_PATH):
+        try:
+            return Image.open(_LOGO_PATH)
+        except Exception:
+            pass
+    return "◆"
+
+
+def get_logo_data_uri():
+    if os.path.exists(_LOGO_PATH):
+        try:
+            with open(_LOGO_PATH, "rb") as f:
+                encoded = base64.b64encode(f.read()).decode("utf-8")
+                return f"data:image/png;base64,{encoded}"
+        except Exception:
+            pass
+    return ""
+
+
+LOGO_DATA_URI = get_logo_data_uri()
+LOGO_HTML = f'<img src="{LOGO_DATA_URI}" alt="Logo" />' if LOGO_DATA_URI else "◆"
 
 
 def render_html(content, **kwargs):
@@ -38,7 +67,7 @@ def render_html(content, **kwargs):
 
 st.set_page_config(
     page_title="AIPRA",
-    page_icon="◆",
+    page_icon=get_page_icon(),
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -175,24 +204,26 @@ render_html(
     .sidebar-logo-icon {
         width: 38px;
         height: 38px;
-        border-radius: 12px;
+        border-radius: 10px;
 
         display: flex;
         align-items: center;
         justify-content: center;
 
-        background:
-            linear-gradient(
-                145deg,
-                #477dff,
-                #264b9b
-            );
+        background: #ffffff;
 
-        box-shadow:
-            0 0 30px rgba(71,125,255,0.28);
+        box-shadow: 0 0 20px rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        overflow: hidden;
 
         font-size: 17px;
         font-weight: 700;
+    }
+
+    .sidebar-logo-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
 
     .sidebar-logo-text {
@@ -300,25 +331,29 @@ render_html(
     }
 
     .brand-symbol {
-        width: 28px;
-        height: 28px;
+        width: 36px;
+        height: 36px;
 
-        border-radius: 9px;
+        border-radius: 10px;
 
         display: flex;
         align-items: center;
         justify-content: center;
 
-        background: linear-gradient(
-            145deg,
-            #5b8dff,
-            #284b9c
-        );
+        background: #ffffff;
 
-        box-shadow: 0 0 20px rgba(91,141,255,0.25);
+        box-shadow: 0 0 18px rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        overflow: hidden;
 
         font-size: 12px;
         font-weight: 700;
+    }
+
+    .brand-symbol img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
 
     .brand-name {
@@ -515,20 +550,28 @@ render_html(
     }
 
     .agent-icon {
-        width: 43px;
-        height: 43px;
+        width: 44px;
+        height: 44px;
 
-        border-radius: 14px;
+        border-radius: 12px;
 
         display: flex;
         align-items: center;
         justify-content: center;
 
-        background: rgba(255,255,255,0.09);
+        background: #ffffff;
 
-        border: 1px solid rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.3);
+        box-shadow: 0 0 20px rgba(255,255,255,0.15);
+        overflow: hidden;
 
         font-size: 18px;
+    }
+
+    .agent-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
 
     .agent-status {
@@ -1511,9 +1554,9 @@ with st.sidebar:
         st.markdown("---")
 
     render_html(
-        """
+        f"""
         <div class="sidebar-logo">
-            <div class="sidebar-logo-icon">◆</div>
+            <div class="sidebar-logo-icon">{LOGO_HTML}</div>
             <div class="sidebar-logo-text">AIPRA</div>
         </div>
         """,
@@ -1640,12 +1683,12 @@ with st.sidebar:
 # ============================================================
 
 render_html(
-    """
+    f"""
     <div class="topbar">
 
         <div class="brand">
 
-            <div class="brand-symbol">◆</div>
+            <div class="brand-symbol">{LOGO_HTML}</div>
 
             <div class="brand-name">
                 AIPRA
@@ -1732,7 +1775,7 @@ with left:
             <div class="agent-header">
 
                 <div class="agent-icon">
-                    ◇
+                    {LOGO_HTML}
                 </div>
 
                 <div class="agent-status">
